@@ -1,0 +1,126 @@
+<!DOCTYPE html><html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>🐧 Тюлени Clash Royale — Оптимизировано</title>
+    <style>
+        body { margin:0; background:#001122; color:white; font-family:Arial; text-align:center; overflow:hidden; }
+        canvas { display:block; margin:0 auto; border:6px solid #00ddff; max-width:100%; }
+        #ui { position:absolute; top:10px; left:10px; background:rgba(0,0,0,0.85); padding:10px 15px; border-radius:12px; font-size:19px; }
+        #log { position:absolute; bottom:25px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.85); padding:12px 25px; border-radius:12px; font-size:22px; }
+    </style>
+</head>
+<body>
+    <canvas id="c" width="900" height="600"></canvas>
+    <div id="ui">
+        <div id="player">Тюлень-Стрелок HP: <span id="p_hp">500</span></div>
+        <div>Ресурсы: <span id="p_res">50</span></div>
+        <div id="enemy">Враг HP: <span id="e_hp">450</span></div>
+    </div>
+    <div id="log"></div>
+    <script>
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const log = document.getElementById('log');
+
+        let player = {x:140, y:300, hp:500, res:50, speed:3.5, atk:35, type:'стрел'};
+        let enemy = {x:760, y:300, hp:450, res:50, speed:3, atk:32, type:'маг'};
+        let lastAttack = 0;
+
+        function playSound(freq, dur, type='sawtooth') {
+            const a = new (window.AudioContext||window.webkitAudioContext)();
+            const o = a.createOscillator(), g = a.createGain();
+            o.type = type; o.frequency.value = freq; g.gain.value = 0.35;
+            o.connect(g); g.connect(a.destination);
+            o.start();
+            setTimeout(()=>{o.stop();}, dur);
+        }
+
+        function logMsg(t) { log.innerHTML = t; setTimeout(()=>{log.innerHTML='';}, 1400); }
+
+        function draw() {
+            ctx.clearRect(0,0,900,600);
+            ctx.fillStyle = '#001122';
+            ctx.fillRect(0,0,900,600);
+
+            ctx.fillStyle = '#00aaff';
+            ctx.fillRect(0,0,900,600);
+
+            // Игрок
+            ctx.fillStyle = '#00ffff';
+            ctx.fillRect(player.x-22, player.y-38, 44, 58);
+            ctx.fillStyle = '#ff00ff';
+            ctx.fillRect(player.x-20, player.y-52, 14, 20);
+            ctx.fillStyle = '#ffff00';
+            ctx.fillRect(player.x-30, player.y-22, 22, 10);
+
+            if (Date.now() - lastAttack < 280) {
+                ctx.fillStyle = '#ffff00';
+                ctx.fillRect(player.x-55, player.y-35, 30, 12);
+            }
+
+            // Враг
+            ctx.fillStyle = '#aa00ff';
+            ctx.fillRect(enemy.x-22, enemy.y-38, 44, 58);
+            ctx.fillStyle = '#00ffff';
+            ctx.fillRect(enemy.x-20, enemy.y-52, 14, 20);
+
+            ctx.fillStyle = '#00ffff';
+            ctx.beginPath(); ctx.arc(player.x+50, player.y-28, 18, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(enemy.x-50, enemy.y-28, 18, 0, Math.PI*2); ctx.fill();
+
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(player.x-40, player.y-75, player.hp/4, 9);
+            ctx.fillRect(enemy.x-40, enemy.y-75, enemy.hp/4, 9);
+
+            ctx.fillStyle = 'white';
+            ctx.font = '21px Arial';
+            ctx.fillText('Твой: ' + player.type, 20, 38);
+            ctx.fillText('Враг: ' + enemy.type, 620, 38);
+        }
+
+        function attack(target) {
+            const dmg = player.atk + (player.res > 0 ? 18 : 0);
+            target.hp -= dmg;
+            playSound(850, 140);
+            logMsg('АТАКА! -' + dmg + ' HP');
+            if (target.hp <= 0) {
+                logMsg('ПОБЕДА! 🐧🎉');
+                return true;
+            }
+            return false;
+        }
+
+        function spell() {
+            playSound(1400, 600, 'triangle');
+            logMsg('Супер-спелл! +60 ресурсов');
+            player.res = Math.min(100, player.res + 60);
+        }
+
+        canvas.addEventListener('click', e => {
+            if (Date.now() - lastAttack < 700) return;
+            const dx = e.clientX - player.x;
+            const dy = e.clientY - player.y;
+            const d = Math.hypot(dx, dy);
+            if (d > 90) {
+                player.x += (dx/d) * player.speed;
+                player.y += (dy/d) * player.speed;
+            } else {
+                lastAttack = Date.now();
+                if (attack(enemy)) return;
+                if (Math.random() < 0.6) attack(player);
+            }
+        });
+
+        window.addEventListener('keydown', e => {
+            if (e.key.toLowerCase() === 'q') spell();
+        });
+
+        function loop() {
+            draw();
+            if (Math.random() < 0.03) player.res = Math.min(100, player.res + 1);
+            requestAnimationFrame(loop);
+        }
+        loop();
+    </script>
+</body>
+</html>
